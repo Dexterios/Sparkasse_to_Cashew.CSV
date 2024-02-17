@@ -2,7 +2,7 @@ import re
 
 import pandas as pd
 import ast
-
+#TODO suggestion with ai
 with open('to_parser/.gitignore', 'a') as f:
     f.write('to_parser/*\n')
 
