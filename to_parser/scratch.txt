@@ -1,0 +1,9 @@
+pythonProject [Sparkasse_to_Cashew]
+  .venv  library root
+  to_parser
+    cashew.csv
+    umsatz.CSV
+  main.py
+  your_data.config
+External Libraries
+Scratches and Consoles
