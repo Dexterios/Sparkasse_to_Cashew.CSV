@@ -96,12 +96,30 @@ class Parser:
 
     pd.set_option('display.max_rows', None) #verwendung_dict = {"to_cash":"*UHR/wSBR*"}
 
-    def __init__(self, file_path = "to_parser/umsatz.CSV"):
+    def __init__(self, parse_mode = "CSV", file_path = "to_parser/umsatz.CSV", account_name = "Bank", to_csv = True):
+        """
+                Initialize the Parser object with the given parameters.
+
+                Parameters:
+                parse_mode (str): The mode to parse the data. Can be "CSV" or "Google Sheets".
+                file_path (str): The path to the CSV file.
+                account_name (str): The name of the account.
+                to_csv (bool): Whether to save the result to a CSV file.
+        """
         self.file_path = file_path
         self.df = pd.read_csv(self.file_path, delimiter=';', encoding='ISO-8859-1')
         self.REGIX_DICT = REGIX_DICT
         self.cashew_headers = ["FormattedDate","Date","Amount","Category","Title","Note","Account"]
+        self.parse_mode = parse_mode
+        self.to_csv = to_csv
+        self.account_name = account_name
     def parse_sparkasse_csv(self):
+        """
+                Read a CSV file and return a pandas DataFrame.
+
+                Returns:
+                DataFrame: A pandas DataFrame containing the CSV data.
+        """
         # Read the CSV file
         df = pd.read_csv(self.file_path, delimiter=';', encoding='ISO-8859-1')
 
@@ -112,10 +130,43 @@ class Parser:
     def categorize(df):
         # Perform any necessary data cleaning or transformation here
         return df"""
+
+    def parse(self):
+        """
+               Parse the data based on the parse mode.
+
+               Returns:
+               DataFrame: The parsed data.
+
+               Raises:
+               ValueError: If the parse mode is not "CSV" or "Google Sheets".
+               """
+        if self.parse_mode == "CSV":
+            d = self.refoctoring_to_csv()
+            if self.to_csv:
+                d.to_csv("to_parser/cashew.csv", index=False)
+            return d
+        elif self.parse_mode == "Google Sheets":
+            d =  self.refoctoring_to_google_sheets()
+            if self.to_csv:
+                d.to_csv("to_parser/cashew.csv", index=False)
+            return d
+        else:
+            raise ValueError("Invalid parse mode. Please use 'CSV' or 'Google Sheets'.")
+
     def regix_dict_filler(self):
         global REGIX_DICT #???
         return REGIX_DICT
-    def refoctoring_to_google_sheets(self, deposit_name = 'Bank'):
+
+    def refoctoring_to_google_sheets(self):
+        """
+            Transform the DataFrame to match the Cashew format for Google Sheets.
+
+            This function performs various transformations on the DataFrame, such as formatting dates, filling NaN values, and classifying data based on the `REGIX_DICT`.
+
+            Returns:
+            DataFrame: The transformed DataFrame.
+        """
         # Perform any necessary data cleaning or transformation here
         df = self.df
         cashew_df = pd.DataFrame(columns=self.cashew_headers)
@@ -124,10 +175,10 @@ class Parser:
         df["Buchungstag"] = df["Buchungstag"].dt.strftime('%Y-%m-%d')
         cashew_df["Date"] = df["Buchungstag"]
         cashew_df["Amount"] = df["Betrag"]
-        cashew_df = cashew_df.assign(Category=pd.Series(["I don't know"] * len(cashew_df)))
+        #cashew_df = cashew_df.assign(Category=pd.Series(["I don't know"] * len(cashew_df)))
         cashew_df["Title"] = df["Buchungstext"]
         cashew_df["Note"] = df["Beguenstigter/Zahlungspflichtiger"]
-        cashew_df["Account"] = deposit_name
+        cashew_df["Account"] = self.account_name
         #swapped_dict = {value: key for key, value in REGIX_DICT.items()}
 
         cashew_df["Category_to_rewrite"] = df["Beguenstigter/Zahlungspflichtiger"] + " " + df["Verwendungszweck"]
@@ -158,7 +209,19 @@ class Parser:
         print(cashew_df["Date"])
         # Format the datetime object to '23-09-05 00:00')
 
-    def refoctoring_to_csv(self, deposit_name='Bank', to_csv = True):
+    def refoctoring_to_csv(self):
+        """
+            Transform the DataFrame to match the Cashew format for CSV files.
+
+            This function performs various transformations on the DataFrame, such as formatting dates, filling NaN values, and classifying data based on the `REGIX_DICT`.
+
+            Returns:
+            DataFrame: The transformed DataFrame.
+        """
+        #headers
+        # date column del and date column add
+        # df[formatted_date] = df[date] + " 00:00"
+
 
         # Perform any necessary data cleaning or transformation here
         df = self.df
@@ -169,14 +232,25 @@ class Parser:
         cashew_df["Amount"] = df["Betrag"]
         cashew_df = cashew_df.assign(Category=pd.Series(["I don't know"] * len(cashew_df)))
         cashew_df["Title"] = df["Buchungstext"]
-        cashew_df["Note"] = df["Beguenstigter/Zahlungspflichtiger"]
-        cashew_df["Account"] = deposit_name
+        cashew_df["Note"] = df["Beguenstigter/Zahlungspflichtiger"].fillna("No note")
+        cashew_df["Account"] = self.account_name
         # swapped_dict = {value: key for key, value in REGIX_DICT.items()}
 
         cashew_df["Category_to_rewrite"] = df["Beguenstigter/Zahlungspflichtiger"] + " " + df["Verwendungszweck"]
 
 
         def classify(row):
+            """
+                Classify a row of data based on the `REGIX_DICT`.
+
+                This function takes a row of data and classifies it based on the `REGIX_DICT`. It returns the matched category.
+
+                Parameters:
+                row (Series): A row of data.
+
+                Returns:
+                str: The matched category.
+            """
             for key, value in REGIX_DICT.items():
                 s = str(row['Category_to_rewrite'])
                 x = re.search(value, s, re.IGNORECASE)
@@ -185,6 +259,17 @@ class Parser:
             return "I don't know"
 
         def classify2(row):
+            """
+                Classify a row of data based on the `REGIX_DICT` and return the matched group.
+
+                This function takes a row of data and classifies it based on the `REGIX_DICT`. It returns the matched group.
+
+                Parameters:
+                row (Series): A row of data.
+
+                Returns:
+                str: The matched group.
+            """
             for key, value in REGIX_DICT.items():
                 s = str(row['Category_to_rewrite'])
                 x = re.search(value, s, re.IGNORECASE)
@@ -199,8 +284,7 @@ class Parser:
         cashew_df['Date'] = pd.to_datetime(cashew_df['Date'], format='%Y-%m-%d').dt.strftime('%m/%d/%y %H:%M:%S.%f')[:23]
         print(cashew_df["Date"])
         # Format the datetime object to '23-09-05 00:00')
-        if to_csv:
-            cashew_df.to_csv("to_parser/cashew.csv", index=False)
+
         return cashew_df
 
 
@@ -220,9 +304,6 @@ if __name__ == "__main__":
         REGIX_DICT = dict(categorys)
 
     parser = Parser()
-    df = parser.parse_sparkasse_csv()
+    df = parser.parse()
 
-    #nd = parser.refoctoring_to_google_sheets()
-
-    nd = parser.refoctoring_to_csv()
-    print(nd.head(40))
+    print(df.head(40))
