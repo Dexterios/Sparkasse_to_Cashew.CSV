@@ -1,102 +1,49 @@
-import re
-
 import pandas as pd
 import ast
 import re
 from ai import ai
-#TODO suggestion with ai
-#TODO 02 remove 0, not , but . in betrag
+import os
+# TODO suggestion with ai
+# TODO 02 remove 0, not , but . in betrag
 
-YOUR_OPENAI_API_KEY = ""
-#REGIX_DICT = {"Enter the category you want to add":"Enter the regix you want to add"}
-#REGIX_DICT = ast.literal_eval(REGIX_DICT)
-REGIX_DICT = {"Food": "EDEKA|LIDL|REWE|NETTO|ALDI|PENNY",
-              "Balance Correction": "Korrektur|KORREKTUR",
-              "Страховка":"AOK Rheinland-Pfalz/Saarland",
-              "Shopping": "x",
-              "Health": "Apotheke",
-              "Transit": "DB|BVG|VBB|Tier",
-              "Entertainment": "Netflix|Spotify|Soundcloud",
-              "Bills & Fees":"Entgeltabrechnung siehe Anlage",
-              "Beauty":"DM",
-              "Travel":"Flixbus|Eurowings|Ryanair|Airbnb|Booking.com|Europcar|Sixt|Hertz|Avis|Europcar|Sixt|Hertz|Avis",
-              "Amazon":"Amazon",
-              "Phone":"O2|Telefonica",
-              "Хата":"Lara SeyhanogluI",
-              "Fitness":"FIT One GmbH"}
-'''
-# Example:
-#REGIX_DICT = {"INSURANCE":"AOK", "RENT":"Miete", "GROCERIES":"EDEKA", "EATING_OUT":"Restaurant", "TRANSPORT":"BVG", "OTHER":"*"}
-#REGIX_DICT = {"INSURANCE":"AOK", "RENT":"Miete", "GROCERIES":"EDEKA|NETTO", "EATING_OUT":"Restaurant", "TRANSPORT":"BVG", "OTHER":"*"}
-#REGIX_DICT = {"INSURANCE":"AOK", "RENT":"Miete", "GROCERIES":"EDEKA", "EATING_OUT":"Restaurant", "TRANSPORT":"BVG
-#REGIX_DICT = {}
+
+# PART0: Load the environment variables
+def load_env_variables(env_file):
+    with open(env_file) as f:
+        for line in f:
+            if line.strip() and not line.startswith('#'):
+                key, value = line.strip().split('=', 1)
+                os.environ[key] = value
+
+
+load_env_variables('env_file_template.env')
+
+# Now you can access the environment variables using os.getenv
+api_key = os.getenv('API_KEY')
+regix_dict = os.getenv('REGIX_DICT')
+
+YOUR_OPENAI_API_KEY = ""  # api_key
+
+REGIX_DICT = ast.literal_eval(regix_dict)
+
+
 """
-REGIX_DICT = {def parse_sparkasse_csv(file_path = "to_parser/umsatz.CSV"):
-    """
-    This function reads a CSV file and returns a pandas DataFrame.
-
-    Parameters:
-    file_path (str): The path to the CSV file.
-
-    Returns:
-    DataFrame: A pandas DataFrame containing the CSV data.
-    """
-
-def regix_dict_filler(regix_dict = REGIX_DICT):
-    """
-    This function fills the REGIX_DICT with the provided dictionary.
-
-    Parameters:
-    regix_dict (dict): The dictionary to fill the REGIX_DICT with.
-
-    Returns:
-    dict: The filled REGIX_DICT.
-    """
-
-def refoctoring(df, deposit_name = 'Bank'):
-    """
-    This function transforms the DataFrame to match the Cashew format.
-
-    Parameters:
-    df (DataFrame): The DataFrame to transform.
-    deposit_name (str): The name of the deposit.
-
-    Returns:
-    DataFrame: The transformed DataFrame.
-    """
-CATEGORY : REGIXREGIX
-CATEGORY : REGIXREGIX
-CATEGORY : REGIXREGIX
-CATEGORY : REGIXREGIX
-CATEGORY : REGIXREGIX
-CATEGORY : REGIXREGIX
-CATEGORY : REGIXREGIX
-CATEGORY : REGIXREGIX
-CATEGORY : REGIXREGIX
-CATEGORY : REGIXREGIX
-CATEGORY : REGIXREGIX
-CATEGORY : REGIXREGIX
-CATEGORY : REGIXREGIX
-CATEGORY : REGIXREGIX
-}
-"""
-'
 
 # PART1: Define the data transformation functions
 #if you want to add a new category, you can add it to the dictionary like this:
 # #{"CATEGORY":"REGIX"} #{"INSURANCE":"AOK"}
 HINT: If you want to add "Cash" as a category, you can add it to the dictionary 
 like this:#{"to_cash":"*UHR/wSBR*"}
-'''
+"""
 
 
 class Parser:
     pd.set_option('display.max_columns', None)  # or number of columns you want
     pd.set_option('display.expand_frame_repr', False)
 
-    pd.set_option('display.max_rows', None) #verwendung_dict = {"to_cash":"*UHR/wSBR*"}
+    pd.set_option('display.max_rows', None)  # verwendung_dict = {"to_cash":"*UHR/wSBR*"}
 
-    def __init__(self, parse_mode = "CSV", file_path = "to_parser/umsatz.CSV", account_name = "Bank", to_csv = True):
+    def __init__(self, parse_mode="CSV", file_path="to_parser/umsatz.CSV", account_name="Bank", to_csv=True):
         """
                 Initialize the Parser object with the given parameters.
 
@@ -109,27 +56,10 @@ class Parser:
         self.file_path = file_path
         self.df = pd.read_csv(self.file_path, delimiter=';', encoding='ISO-8859-1')
         self.REGIX_DICT = REGIX_DICT
-        self.cashew_headers = ["FormattedDate","Date","Amount","Category","Title","Note","Account"]
+        self.cashew_headers = ["FormattedDate", "Date", "Amount", "Category", "Title", "Note", "Account"]
         self.parse_mode = parse_mode
         self.to_csv = to_csv
         self.account_name = account_name
-    def parse_sparkasse_csv(self):
-        """
-                Read a CSV file and return a pandas DataFrame.
-
-                Returns:
-                DataFrame: A pandas DataFrame containing the CSV data.
-        """
-        # Read the CSV file
-        df = pd.read_csv(self.file_path, delimiter=';', encoding='ISO-8859-1')
-
-        # Perform any necessary data cleaning or transformation here
-        return df
-    """
-    WAIT FOR AN UODATE
-    def categorize(df):
-        # Perform any necessary data cleaning or transformation here
-        return df"""
 
     def parse(self):
         """
@@ -147,22 +77,60 @@ class Parser:
                 d.to_csv("to_parser/cashew.csv", index=False)
             return d
         elif self.parse_mode == "Google Sheets":
-            d =  self.refoctoring_to_google_sheets()
+            d = self.refoctoring_to_google_sheets()
             if self.to_csv:
                 d.to_csv("to_parser/cashew.csv", index=False)
             return d
         else:
             raise ValueError("Invalid parse mode. Please use 'CSV' or 'Google Sheets'.")
 
-    def regix_dict_filler(self):
-        global REGIX_DICT #???
-        return REGIX_DICT
+    @staticmethod
+    def classify(row):
+        """
+            Classify a row of data based on the `REGIX_DICT`.
+
+            This function takes a row of data and classifies it based on the `REGIX_DICT`.
+            It returns the matched category.
+
+            Parameters:
+            row (Series): A row of data.
+
+            Returns:
+            str: The matched category.
+        """
+        for key, value in REGIX_DICT.items():
+            s = str(row['Category_to_rewrite'])
+            x = re.search(value, s, re.IGNORECASE)
+            if x:
+                return key
+        return "I don't know"
+
+    @staticmethod
+    def classify2(row):
+        """
+            Classify a row of data based on the `REGIX_DICT` and return the matched group.
+
+            This function takes a row of data and classifies it based on the `REGIX_DICT`. It returns the matched group.
+
+            Parameters:
+            row (Series): A row of data.
+
+            Returns:
+            str: The matched group.
+        """
+        for key, value in REGIX_DICT.items():
+            s = str(row['Category_to_rewrite'])
+            x = re.search(value, s, re.IGNORECASE)
+            if x:
+                return x.group()
+            return ""
 
     def refoctoring_to_google_sheets(self):
         """
             Transform the DataFrame to match the Cashew format for Google Sheets.
 
-            This function performs various transformations on the DataFrame, such as formatting dates, filling NaN values, and classifying data based on the `REGIX_DICT`.
+            This function performs various transformations on the DataFrame, such as formatting dates,
+            filling NaN values, and classifying data based on the `REGIX_DICT`.
 
             Returns:
             DataFrame: The transformed DataFrame.
@@ -182,32 +150,18 @@ class Parser:
         #swapped_dict = {value: key for key, value in REGIX_DICT.items()}
 
         cashew_df["Category_to_rewrite"] = df["Beguenstigter/Zahlungspflichtiger"] + " " + df["Verwendungszweck"]
-        import re
 
-        def classify(row):
-            for key, value in REGIX_DICT.items():
-                s = str(row['Category_to_rewrite'])
-                x = re.search(value, s, re.IGNORECASE)
-                if x:
-                    return key
-            return "I don't know"
 
-        def classify2(row):
-            for key, value in REGIX_DICT.items():
-                s = str(row['Category_to_rewrite'])
-                x = re.search(value, s, re.IGNORECASE)
-                if x:
-                    return x.group()
-                return ""
-
-        cashew_df['Category'] = cashew_df.apply(classify, axis=1)
-        cashew_df['Title'] = cashew_df.apply(classify2, axis=1)
+        cashew_df['Category'] = cashew_df.apply(self.classify, axis=1)
+        cashew_df['Title'] = cashew_df.apply(self.classify2, axis=1)
         del cashew_df['Category_to_rewrite']
         del cashew_df['date']
         #cashew_df['FormattedDate'] = cashew_df['date'] + " 00:00"
         cashew_df['Date'] = pd.to_datetime(cashew_df['Date'], format='%Y-%m-%d').dt.strftime('%m/%d/%y') + " 00:00"
         print(cashew_df["Date"])
         # Format the datetime object to '23-09-05 00:00')
+        return cashew_df
+
 
     def refoctoring_to_csv(self):
         """
@@ -239,46 +193,8 @@ class Parser:
         cashew_df["Category_to_rewrite"] = df["Beguenstigter/Zahlungspflichtiger"] + " " + df["Verwendungszweck"]
 
 
-        def classify(row):
-            """
-                Classify a row of data based on the `REGIX_DICT`.
-
-                This function takes a row of data and classifies it based on the `REGIX_DICT`. It returns the matched category.
-
-                Parameters:
-                row (Series): A row of data.
-
-                Returns:
-                str: The matched category.
-            """
-            for key, value in REGIX_DICT.items():
-                s = str(row['Category_to_rewrite'])
-                x = re.search(value, s, re.IGNORECASE)
-                if x:
-                    return key
-            return "I don't know"
-
-        def classify2(row):
-            """
-                Classify a row of data based on the `REGIX_DICT` and return the matched group.
-
-                This function takes a row of data and classifies it based on the `REGIX_DICT`. It returns the matched group.
-
-                Parameters:
-                row (Series): A row of data.
-
-                Returns:
-                str: The matched group.
-            """
-            for key, value in REGIX_DICT.items():
-                s = str(row['Category_to_rewrite'])
-                x = re.search(value, s, re.IGNORECASE)
-                if x:
-                    return x.group()
-                return ""
-
-        cashew_df['Category'] = cashew_df.apply(classify, axis=1)
-        cashew_df['Title'] = cashew_df.apply(classify2, axis=1)
+        cashew_df['Category'] = cashew_df.apply(self.classify, axis=1)
+        cashew_df['Title'] = cashew_df.apply(self.classify2, axis=1)
         del cashew_df['Category_to_rewrite']
         # cashew_df['FormattedDate'] = cashew_df['date'] + " 00:00"
         cashew_df['Date'] = pd.to_datetime(cashew_df['Date'], format='%Y-%m-%d').dt.strftime('%m/%d/%y %H:%M:%S.%f')[:23]
@@ -289,7 +205,6 @@ class Parser:
 
 
         #cashew_df['Category'] = df['Beguenstigter/Zahlungspflichtiger'].replace(swapped_dict, regex=True)
-        return cashew_df
 
 if __name__ == "__main__":
     custom_prompt = f"Classify each data point from column 'Category_to_rewrite' into one of the following categories: {REGIX_DICT.keys()}. "\
