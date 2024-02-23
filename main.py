@@ -11,10 +11,10 @@ import os
 def load_env_variables(env_file):
     with open(env_file) as f:
         for line in f:
-            if line.strip() and not line.startswith('#'):
+            if line.strip() and not line.startswith('#') and '=' in line:
                 key, value = line.strip().split('=', 1)
                 os.environ[key] = value
-
+                print(f'Set environment variable {key} = {value}')
 
 load_env_variables('env_file_template.env')
 
@@ -159,7 +159,7 @@ class Parser:
         #cashew_df['FormattedDate'] = cashew_df['date'] + " 00:00"
         cashew_df['Date'] = pd.to_datetime(cashew_df['Date'], format='%Y-%m-%d').dt.strftime('%m/%d/%y') + " 00:00"
         print(cashew_df["Date"])
-        # Format the datetime object to '23-09-05 00:00')
+        # Format the datetime object to '23-09-05 00:00'
         return cashew_df
 
 
