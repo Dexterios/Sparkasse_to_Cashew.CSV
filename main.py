@@ -61,29 +61,6 @@ class Parser:
         self.to_csv = to_csv
         self.account_name = account_name
 
-    def parse(self):
-        """
-               Parse the data based on the parse mode.
-
-               Returns:
-               DataFrame: The parsed data.
-
-               Raises:
-               ValueError: If the parse mode is not "CSV" or "Google Sheets".
-               """
-        if self.parse_mode == "CSV":
-            d = self.refoctoring_to_csv()
-            if self.to_csv:
-                d.to_csv("to_parser/cashew.csv", index=False)
-            return d
-        elif self.parse_mode == "Google Sheets":
-            d = self.refoctoring_to_google_sheets()
-            if self.to_csv:
-                d.to_csv("to_parser/cashew.csv", index=False)
-            return d
-        else:
-            raise ValueError("Invalid parse mode. Please use 'CSV' or 'Google Sheets'.")
-
     @staticmethod
     def classify(row):
         """
@@ -125,65 +102,25 @@ class Parser:
                 return x.group()
             return ""
 
-    def refoctoring_to_google_sheets(self):
+    def get_columns(self):
         """
-            Transform the DataFrame to match the Cashew format for Google Sheets.
+               Get the columns of the parsed data.
 
-            This function performs various transformations on the DataFrame, such as formatting dates,
-            filling NaN values, and classifying data based on the `REGIX_DICT`.
+               Returns:
+               DataFrame: The parsed data with the columns.
 
-            Returns:
-            DataFrame: The transformed DataFrame.
-        """
-        # Perform any necessary data cleaning or transformation here
+               """
         df = self.df
-        cashew_df = pd.DataFrame(columns=self.cashew_headers)
-        cashew_df["date"] = df["Buchungstag"]
+
+        if self.parse_mode == "CSV":
+            cashew_df = pd.DataFrame(columns=self.cashew_headers[1:])
+        else:
+            cashew_df = pd.DataFrame(columns=self.cashew_headers)
+
         df["Buchungstag"] = pd.to_datetime(df["Buchungstag"], format='%d.%m.%y')
         df["Buchungstag"] = df["Buchungstag"].dt.strftime('%Y-%m-%d')
         cashew_df["Date"] = df["Buchungstag"]
-        cashew_df["Amount"] = df["Betrag"]
-        #cashew_df = cashew_df.assign(Category=pd.Series(["I don't know"] * len(cashew_df)))
-        cashew_df["Title"] = df["Buchungstext"]
-        cashew_df["Note"] = df["Beguenstigter/Zahlungspflichtiger"]
-        cashew_df["Account"] = self.account_name
-        #swapped_dict = {value: key for key, value in REGIX_DICT.items()}
-
-        cashew_df["Category_to_rewrite"] = df["Beguenstigter/Zahlungspflichtiger"] + " " + df["Verwendungszweck"]
-
-
-        cashew_df['Category'] = cashew_df.apply(self.classify, axis=1)
-        cashew_df['Title'] = cashew_df.apply(self.classify2, axis=1)
-        del cashew_df['Category_to_rewrite']
-        del cashew_df['date']
-        #cashew_df['FormattedDate'] = cashew_df['date'] + " 00:00"
-        cashew_df['Date'] = pd.to_datetime(cashew_df['Date'], format='%Y-%m-%d').dt.strftime('%m/%d/%y') + " 00:00"
-        print(cashew_df["Date"])
-        # Format the datetime object to '23-09-05 00:00'
-        return cashew_df
-
-
-    def refoctoring_to_csv(self):
-        """
-            Transform the DataFrame to match the Cashew format for CSV files.
-
-            This function performs various transformations on the DataFrame, such as formatting dates, filling NaN values, and classifying data based on the `REGIX_DICT`.
-
-            Returns:
-            DataFrame: The transformed DataFrame.
-        """
-        #headers
-        # date column del and date column add
-        # df[formatted_date] = df[date] + " 00:00"
-
-
-        # Perform any necessary data cleaning or transformation here
-        df = self.df
-        cashew_df = pd.DataFrame(columns=self.cashew_headers[1:-1])
-        df["Buchungstag"] = pd.to_datetime(df["Buchungstag"], format='%d.%m.%y')
-        df["Buchungstag"] = df["Buchungstag"].dt.strftime('%Y-%m-%d')
-        cashew_df["Date"] = df["Buchungstag"]
-        cashew_df["Amount"] = df["Betrag"]
+        cashew_df["Amount"] = df["Betrag"].str.replace(',', '.')
         cashew_df = cashew_df.assign(Category=pd.Series(["I don't know"] * len(cashew_df)))
         cashew_df["Title"] = df["Buchungstext"]
         cashew_df["Note"] = df["Beguenstigter/Zahlungspflichtiger"].fillna("No note")
@@ -192,19 +129,38 @@ class Parser:
 
         cashew_df["Category_to_rewrite"] = df["Beguenstigter/Zahlungspflichtiger"] + " " + df["Verwendungszweck"]
 
-
         cashew_df['Category'] = cashew_df.apply(self.classify, axis=1)
         cashew_df['Title'] = cashew_df.apply(self.classify2, axis=1)
+        cashew_df['Date'] = pd.to_datetime(cashew_df['Date'], format='%Y-%m-%d').dt.strftime('%m/%d/%y') + " 00:00"
         del cashew_df['Category_to_rewrite']
-        # cashew_df['FormattedDate'] = cashew_df['date'] + " 00:00"
-        cashew_df['Date'] = pd.to_datetime(cashew_df['Date'], format='%Y-%m-%d').dt.strftime('%m/%d/%y %H:%M:%S.%f')[:23]
-        print(cashew_df["Date"])
-        # Format the datetime object to '23-09-05 00:00')
+        return df, cashew_df
 
-        return cashew_df
+    def parse(self):
+        """
+               Parse the data based on the parse mode.
 
+               Returns:
+               DataFrame: The parsed data.
 
-        #cashew_df['Category'] = df['Beguenstigter/Zahlungspflichtiger'].replace(swapped_dict, regex=True)
+               Raises:
+               ValueError: If the parse mode is not "CSV" or "Google Sheets".
+               """
+        if self.parse_mode == "CSV":
+            _, cashew_df = self.get_columns()
+            if self.to_csv:
+                cashew_df.to_csv("to_parser/cashew.csv", index=False)
+            return cashew_df
+        elif self.parse_mode == "Google Sheets":
+            df, cashew_df = self.get_columns()
+            cashew_df["date"] = df["Buchungstag"]
+            cashew_df['FormattedDate'] = cashew_df['date'] + " 00:00"
+            print(cashew_df["Date"])
+            if self.to_csv:
+                cashew_df.to_csv("to_parser/cashew.csv", index=False)
+            return cashew_df
+        else:
+            raise ValueError("Invalid parse mode. Please use 'CSV' or 'Google Sheets'.")
+
 
 if __name__ == "__main__":
     custom_prompt = f"Classify each data point from column 'Category_to_rewrite' into one of the following categories: {REGIX_DICT.keys()}. "\
